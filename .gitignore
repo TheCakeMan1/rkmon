@@ -1,0 +1,21 @@
+# --- Build output ---
+*.o
+*.out
+*.elf
+*.bin
+*.hex
+*.map
+*.a
+
+# --- Make ---
+/build/
+/dist/
+*.d
+
+# --- VS Code ---
+.vscode/
+*.code-workspace
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
