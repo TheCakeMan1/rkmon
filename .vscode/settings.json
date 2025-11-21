@@ -1,0 +1,14 @@
+{
+  "files.associations": {
+    "fs.h": "c",
+    "module.h": "c",
+    "kernel.h": "c",
+    "cpu_update.h": "c",
+    "mem_update.h": "c",
+    "chrono": "c",
+    "network_update.h": "c",
+    "struct.h": "c",
+    "rkmon_uapi.h": "c",
+    "ioctl.h": "c"
+  }
+}
