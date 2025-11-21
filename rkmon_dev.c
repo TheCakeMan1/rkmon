@@ -14,9 +14,6 @@
 
 #define DEVICE_NAME "rkmon"
 
-#define RKMON_SET_UPDATE_RATE _IOW('r', 1, int)
-#define RKMON_GET_NETINFO _IOWR('r', 2, struct rkmon_net_request)
-
 static int update_interval_ms = 500;
 
 static dev_t dev;
@@ -138,6 +135,35 @@ static long rkmon_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
         pr_info("rkmon: update interval set to %d ms\n", val);
         return 0;
+    case RKMON_GET_CPUINFO:
+    {
+        struct rkmon_cpu_request req;
+        memset(&req, 0, sizeof(req));
+
+        req.cpu_count = cpu_count;
+
+        for (int i = 0; i < cpu_count; i++)
+        {
+            req.cpu_load[i] = cpu_loads[i];
+            req.cpu_freq[i] = cpu_freq[i];
+        }
+
+        /* среднее и максимум */
+        int sum = 0, maxv = 0;
+        for (int i = 0; i < cpu_count; i++)
+        {
+            sum += cpu_loads[i];
+            if (cpu_loads[i] > maxv)
+                maxv = cpu_loads[i];
+        }
+        req.avg_load = sum / cpu_count;
+        req.max_load = maxv;
+
+        if (copy_to_user((void __user *)arg, &req, sizeof(req)))
+            return -EFAULT;
+
+        return 0;
+    }
     case RKMON_GET_NETINFO:
     {
         struct rkmon_net_request req;

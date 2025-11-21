@@ -68,6 +68,21 @@ int main(int argc, char **argv)
            (unsigned long long)req.info.tx_packets,
            (unsigned long long)req.info.tx_errors);
 
+    struct rkmon_cpu_request req2;
+
+    ioctl(fd, RKMON_GET_CPUINFO, &req2);
+
+    printf("CPU count: %d\n", req2.cpu_count);
+
+    for (int i = 0; i < req2.cpu_count; i++)
+    {
+        printf("CPU %d: load=%d%% freq=%llu kHz temp=%dC\n",
+               i, req2.cpu_load[i], req2.cpu_freq[i], req2.cpu_temp[i]);
+    }
+
+    printf("AVG: %d%%\n", req2.avg_load);
+    printf("MAX: %d%%\n", req2.max_load);
+
     close(fd);
     return 0;
 }
