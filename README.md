@@ -101,3 +101,5 @@ IPv6: fe80:0000:0000:0000:3032:7090:84fd:6f11
 RX/packets/errors: 15819 557604 0
 TX/packets/errors: 18014398509463776 469211 0
 ```
+## Installation
+Смотри: [INSTALL.md](INSTALL.md)
