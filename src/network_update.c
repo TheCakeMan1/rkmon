@@ -2,7 +2,7 @@
 #include <linux/module.h>
 #include "network_update.h"
 
-int get_netdev_list(struct netdev_list *out)
+int get_netdev_list(struct rkmon_net_list *out)
 {
     struct net_device *dev;
     int idx = 0;

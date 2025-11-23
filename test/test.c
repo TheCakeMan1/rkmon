@@ -78,11 +78,64 @@ int main(int argc, char **argv)
     {
         printf("CPU %d: load=%d%% freq=%llu kHz temp=%dC\n",
                i, req2.cpu_load[i], req2.cpu_freq[i], req2.cpu_temp[i]);
+        // printf("FREQ:\n");
+        // for (int j = 0; j < req2.freq_table_count[i]; j++)
+        // {
+        //     printf("%d ", req2.freq_table[i][j]);
+        // }
+        // printf("\n");
     }
 
     printf("AVG: %d%%\n", req2.avg_load);
     printf("MAX: %d%%\n", req2.max_load);
 
+    struct rkmon_cpufreq_request req3;
+    req3.cpu = 6;
+    ioctl(fd, RKMON_GET_CPUFREQ, &req3);
+
+    printf("CPU %d: cur=%lld min=%lld max=%lld \n",
+           req3.cpu, req3.cur, req3.min, req3.max);
+    for (int i = 0; i < req3.table_count; i++)
+    {
+        printf("%d\n", req3.table[i]);
+    }
+
+    struct rkmon_net_list req_net_list;
+    ioctl(fd, RKMON_GET_NETLIST, &req_net_list);
+    for (int i = 0; i < req_net_list.count; i++)
+    {
+        printf("%s ", req_net_list.names[i]);
+    }
+
+    printf("\n");
+
+    struct rkmon_mem_ram mem_ram;
+    ioctl(fd, RKMON_GET_MEM_RAM, &mem_ram);
+    printf("Avalid: %d\nBuffers: %d\nFree: %d\nFreeSwap: %d\nTotal: %d\nTotalSwap: %d\n",
+           mem_ram.avail,
+           mem_ram.buffers,
+           mem_ram.free,
+           mem_ram.freeswap,
+           mem_ram.total,
+           mem_ram.totalswap);
+
+    // struct rkmon_set_cpufreq_request req4;
+
+    // req4.cpu = 6;
+    // req4.freq = 408000;
+
+    // int ret = ioctl(fd, RKMON_SET_CPUFREQ, &req4);
+    // printf("%d\n", ret);
+
+    // req3.cpu = 6;
+    // ioctl(fd, RKMON_GET_CPUFREQ, &req3);
+
+    // printf("CPU %d: cur=%lld min=%lld max=%lld \n",
+    //        req3.cpu, req3.cur, req3.min, req3.max);
+    // for (int i = 0; i < req3.table_count; i++)
+    // {
+    //     printf("%d\n", req3.table[i]);
+    // }
     close(fd);
     return 0;
 }

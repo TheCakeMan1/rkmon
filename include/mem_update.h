@@ -3,6 +3,8 @@
 #include <linux/mm.h>
 #include <linux/vmstat.h>
 
-void get_memory_info(long *total_kb, long *free_kb);
+#include "rkmon_uapi.h"
+
+void get_memory_info(struct rkmon_mem_ram *mem_ram);
 
 #endif

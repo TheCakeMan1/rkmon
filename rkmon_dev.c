@@ -19,15 +19,15 @@ static int update_interval_ms = 500;
 static dev_t dev;
 static struct cdev c_dev;
 
-static long total, free;
 static struct net_rate net_rate_global = {0};
-static struct netinfo net;
 static struct net_rate *r = &net_rate_global;
-static struct netdev_list nl;
+
+// static long total, free;
+static struct netinfo net;
+static struct rkmon_net_list nl;
+static char buffer[1000];
 
 static int cpu_count;
-
-static char buffer[1000];
 
 static struct timer_list cpu_timer;
 
@@ -45,13 +45,8 @@ static ssize_t dev_read(struct file *filep, char __user *buf,
     int pos = 0;
     int i;
 
-    // struct netinfo net;
-    // struct net_rate *r = &net_rate_global;
-
-    // struct netdev_list nl;
     get_netdev_list(&nl);
-
-    get_memory_info(&total, &free);
+    // get_memory_info(&total, &free);
 
     pos += scnprintf(buffer + pos, sizeof(buffer) - pos,
                      "%d\n", cpu_count);
@@ -67,8 +62,8 @@ static ssize_t dev_read(struct file *filep, char __user *buf,
         pos += scnprintf(buffer + pos, sizeof(buffer) - pos,
                          "%lld ", cpu_freq[i]);
     }
-    pos += scnprintf(buffer + pos, sizeof(buffer) - pos, "\n");
-    pos += scnprintf(buffer + pos, sizeof(buffer) - pos, "%ld %ld\n", total, free);
+    // pos += scnprintf(buffer + pos, sizeof(buffer) - pos, "\n");
+    // pos += scnprintf(buffer + pos, sizeof(buffer) - pos, "%ld %ld\n", total, free);
 
     pos += scnprintf(buffer + pos, sizeof(buffer) - pos, "\n");
     pos += scnprintf(buffer + pos, sizeof(buffer) - pos, "%d\n", nl.count);
@@ -105,12 +100,6 @@ static ssize_t dev_read(struct file *filep, char __user *buf,
                          net.tx_kbs, net.tx_packets, net.tx_errors);
     }
 
-    // for (i = 0; i < nl.count; i++)
-    // {
-    //     pos += scnprintf(buffer + pos, sizeof(buffer) - pos,
-    //                      "%s ", nl.names[i]);
-    // }
-
     pos += scnprintf(buffer + pos, sizeof(buffer) - pos, "\n");
     return simple_read_from_buffer(buf, len, offset, buffer, pos);
 }
@@ -122,6 +111,7 @@ static long rkmon_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     switch (cmd)
     {
     case RKMON_SET_UPDATE_RATE:
+    {
         if (copy_from_user(&val, (int __user *)arg, sizeof(int)))
             return -EFAULT;
 
@@ -135,9 +125,66 @@ static long rkmon_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
         pr_info("rkmon: update interval set to %d ms\n", val);
         return 0;
+    }
+
+    case RKMON_GET_CPUFREQ:
+    {
+        struct rkmon_cpufreq_request req_cpufreq;
+
+        if (copy_from_user(&req_cpufreq, (void __user *)arg, sizeof(req_cpufreq)))
+            return -EFAULT;
+
+        if (update_ioctl_struct_update_cpu_load(&req_cpufreq))
+            return -EINVAL;
+
+        if (copy_to_user((void __user *)arg, &req_cpufreq, sizeof(req_cpufreq)))
+            return -EFAULT;
+
+        return 0;
+    }
+
+    case RKMON_GET_MEM_RAM:
+    {
+        struct rkmon_mem_ram req_mem_ram;
+
+        get_memory_info(&req_mem_ram);
+
+        if (copy_to_user((void __user *)arg, &req_mem_ram, sizeof(req_mem_ram)))
+            return -EFAULT;
+
+        return 0;
+    }
+
+        // TODO понять почему не меняются частоты
+        //  case RKMON_SET_CPUFREQ:
+        //  {
+        //      struct rkmon_set_cpufreq_request req_set_cpufreq;
+
+        //     if (copy_from_user(&req_set_cpufreq,
+        //                        (void __user *)arg,
+        //                        sizeof(req_set_cpufreq)))
+        //         return -EFAULT;
+
+        //     if (set_cpu_freq_limits(&req_set_cpufreq))
+        //         return -EINVAL;
+
+        //     return 0;
+        // }
+
+    case RKMON_GET_NETLIST:
+    {
+        struct rkmon_net_list net_list;
+
+        get_netdev_list(&net_list);
+
+        if (copy_to_user((void __user *)arg, &net_list, sizeof(net_list)))
+            return -EFAULT;
+        return 0;
+    }
     case RKMON_GET_CPUINFO:
     {
         struct rkmon_cpu_request req;
+        int sum = 0, maxv = 0;
         memset(&req, 0, sizeof(req));
 
         req.cpu_count = cpu_count;
@@ -148,8 +195,6 @@ static long rkmon_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             req.cpu_freq[i] = cpu_freq[i];
         }
 
-        /* среднее и максимум */
-        int sum = 0, maxv = 0;
         for (int i = 0; i < cpu_count; i++)
         {
             sum += cpu_loads[i];
@@ -164,10 +209,11 @@ static long rkmon_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
         return 0;
     }
+
     case RKMON_GET_NETINFO:
     {
         struct rkmon_net_request req;
-        struct netinfo tmp; // внутренняя структура ядра
+        struct netinfo tmp;
 
         if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
             return -EFAULT;
@@ -198,7 +244,6 @@ static long rkmon_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
         return 0;
     }
-
     default:
         return -EINVAL;
     }
@@ -236,6 +281,10 @@ static int __init my_init(void)
 
     printk(KERN_INFO "rkmon: loaded\n");
     printk(KERN_INFO "rkmon: device major=%d minor=0\n", MAJOR(dev));
+
+    for (int cpu = 0; cpu < cpu_count; cpu++)
+        policy_cache[cpu] = cpufreq_cpu_get(cpu);
+    printk(KERN_INFO "rkmon: read policy cpu kernel\n");
 
     timer_setup(&cpu_timer, cpu_timer_func, 0);
     mod_timer(&cpu_timer, jiffies + HZ / 2);

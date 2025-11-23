@@ -8,6 +8,8 @@
 #include <linux/ipv6.h>
 #include <net/addrconf.h>
 
+#include "rkmon_uapi.h"
+
 #define MAX_NETDEV 32
 #define MAX_IFNAME 16
 
@@ -39,12 +41,6 @@ struct netinfo
     bool has_ipv6;
 };
 
-struct netdev_list
-{
-    int count;
-    char names[MAX_NETDEV][MAX_IFNAME];
-};
-
 // API
 struct net_device *get_netdev(const char *name);
 
@@ -64,6 +60,6 @@ void get_netinfo(const char *ifname,
                  struct netinfo *ni,
                  struct net_rate *rate);
 
-int get_netdev_list(struct netdev_list *out);
+int get_netdev_list(struct rkmon_net_list *out);
 
 #endif
